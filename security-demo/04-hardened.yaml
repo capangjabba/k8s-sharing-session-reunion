@@ -1,0 +1,46 @@
+# The "fixed" version of 01-app.yaml + 02-rbac.yaml — reference for the
+# closing "how do we stop this?" moment. Not applied by reset.sh.
+#
+# Three fixes, one per link in the attack chain:
+#   1. Don't mount a token the app doesn't need (nothing to steal)
+#   2. Grant the SA nothing it doesn't strictly need (nothing to abuse)
+#   3. Enforce a Pod Security Standard on the namespace (nothing to escape with)
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: web
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      serviceAccountName: web
+      automountServiceAccountToken: false   # FIX 1: app never calls the API -> no token mounted
+      containers:
+        - name: app
+          image: curlimages/curl:8.11.1
+          command: ["sleep", "infinity"]
+          securityContext:                  # FIX 3 (per-pod half): plays nice with "restricted"
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
+---
+# FIX 2: the Role is deleted entirely. If the app someday really needs to
+# read ONE config value, grant `get` on `configmaps` with `resourceNames`
+# pinned to that single ConfigMap — never blanket `list secrets`.
+#
+# FIX 3 (namespace half), applied imperatively in the runbook:
+#   kubectl label ns default pod-security.kubernetes.io/enforce=restricted

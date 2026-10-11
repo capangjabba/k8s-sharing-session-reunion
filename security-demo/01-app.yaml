@@ -1,0 +1,33 @@
+# The "vulnerable app" — same idea as the whoami app from step 2,
+# but with a realistic misconfiguration: it runs as an over-privileged
+# ServiceAccount whose token is auto-mounted into the pod.
+#
+# curlimages/curl stands in for the app: small image, real curl on board.
+# (Needs adding to IMAGES in setup.sh — see reset.sh note.)
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: web
+  namespace: default
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      serviceAccountName: web          # <-- the app's identity
+      automountServiceAccountToken: true
+      containers:
+        - name: app
+          image: curlimages/curl:8.11.1
+          command: ["sleep", "infinity"]

@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: web # the Deployment owns every pod carrying this label
+  template: # blueprint for each pod
+    metadata:
+      labels:
+        app: web # must match the selector above
+    spec:
+      containers:
+        - name: whoami
+          image: traefik/whoami:v1.10.3 # replies with its own pod name
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: 10m # HPA measures usage as % of this
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi

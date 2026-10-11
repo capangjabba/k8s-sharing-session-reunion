@@ -1,0 +1,11 @@
+# 1 control-plane + 2 workers. Each "node" is a Docker container.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: k8s-demo
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      - containerPort: 30090 # NodePort of the web-nodeport Service
+        hostPort: 30090      # -> reachable at localhost:30090 on the laptop
+  - role: worker
+  - role: worker

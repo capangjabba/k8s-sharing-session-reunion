@@ -1,0 +1,31 @@
+# The actual vulnerability: over-granted RBAC.
+# Someone "just wanted to read one config value" and gave the app's SA
+# the ability to read EVERY Secret in the namespace — and, worse, to
+# create Pods. Keep this file small on screen: every line here is an
+# attack path.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: web
+  namespace: default
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list"]        # <-- can read every Secret in default
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["create"]             # <-- can schedule arbitrary pods
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: web
+  namespace: default
+subjects:
+  - kind: ServiceAccount
+    name: web
+    namespace: default
+roleRef:
+  kind: Role
+  name: web
+  apiGroup: rbac.authorization.k8s.io

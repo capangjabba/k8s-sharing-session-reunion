@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+data:
+  APP_COLOR: blue
+  APP_MODE: demo
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: app-secret
+type: Opaque
+stringData: # plain text here; Kubernetes stores it base64-encoded (NOT encrypted)
+  DB_PASSWORD: s3cr3t
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: config-demo
+spec:
+  containers:
+    - name: app
+      image: busybox:1.36
+      command: ["sleep", "infinity"]
+      envFrom: # way 1: every key becomes an env var
+        - configMapRef:
+            name: app-config
+        - secretRef:
+            name: app-secret
+      volumeMounts: # way 2: every key becomes a file
+        - name: config
+          mountPath: /etc/config
+  volumes:
+    - name: config
+      configMap:
+        name: app-config
